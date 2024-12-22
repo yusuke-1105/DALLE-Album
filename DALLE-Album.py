@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 import openai
 import streamlit as st
 import asyncio
@@ -13,6 +13,8 @@ if 'api_type' not in st.session_state:
     st.session_state.api_type = 'なし'
 if 'api_key' not in st.session_state:
     st.session_state.api_key = ''
+if 'resource_name' not in st.session_state:
+    st.session_state.resource_name = ''
 if 'base_prompt' not in st.session_state:
     st.session_state.base_prompt = "Create an album cover with the following style: "
 # セッション状態の初期化部分に追加
@@ -21,6 +23,8 @@ if 'ordered_tags' not in st.session_state:
 
 # 環境変数にAPIキーを設定
 os.environ['OPENAI_API_KEY'] = st.session_state.api_key
+os.environ['AZURE_OPENAI_API_KEY'] = st.session_state.api_key
+os.environ['AZURE_OPENAI_ENDPOINT'] = f"https://{st.session_state.resource_name}.openai.azure.com/"
 
 # APIの設定
 def configure_openai_api():
@@ -59,11 +63,14 @@ async def generate_image(prompt):
         return 'image.jpg'
     
     try:
+
         if st.session_state.api_type == 'OpenAI':
-            # client = OpenAI()
-            response = OpenAI().images.generate(
+            client = OpenAI(
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+            response = client.images.generate(
                 model="dall-e-3",
-                prompt="a white siamese cat",
+                prompt=prompt,
                 size="1024x1024",
                 quality="standard",
                 n=1,
@@ -71,7 +78,21 @@ async def generate_image(prompt):
 
             return response.data[0].url
         elif st.session_state.api_type == 'Azure OpenAI Service':
-            pass
+            # Azure OpenAI Service client setup
+            client = AzureOpenAI(
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+                api_version="2024-07-01-preview",
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+            )
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size="1024x1024",
+                quality="standard",
+                n=1,
+            )
+
+            return response.data[0].url
     except Exception as e:
         st.error(f"Error generating image: {str(e)}")
         return None
@@ -90,6 +111,12 @@ def main():
             type="password",
             disabled=(st.session_state.api_type == 'なし'),
             value=st.session_state.api_key
+        )
+
+        st.session_state.resource_name = st.text_input(
+            "Azure OpenAI Serviceのリソース名",
+            disabled=(st.session_state.api_type != 'Azure OpenAI Service'),
+            value=st.session_state.resource_name
         )
         
         st.button('送信 or 戻る', on_click=lambda: setattr(st.session_state, 'page', 'main'))

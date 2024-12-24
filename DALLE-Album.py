@@ -24,22 +24,7 @@ if 'ordered_tags' not in st.session_state:
 # 環境変数にAPIキーを設定
 os.environ['OPENAI_API_KEY'] = st.session_state.api_key
 os.environ['AZURE_OPENAI_API_KEY'] = st.session_state.api_key
-os.environ['AZURE_OPENAI_ENDPOINT'] = f"https://{st.session_state.resource_name}.openai.azure.com/"
-
-# APIの設定
-def configure_openai_api():
-    if st.session_state.api_type == 'openai':
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        openai.api_base = "https://api.openai.com/v1"
-        openai.api_type = "openai"
-    elif st.session_state.api_type == 'azure':
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        openai.api_base = "https://YOUR_AZURE_OPENAI_ENDPOINT"  # Azure OpenAI Serviceのエンドポイント
-        openai.api_version = "2022-12-01"  # 使用するAPIバージョン
-        openai.api_type = "azure"
-
-# API設定を呼び出し
-configure_openai_api()
+os.environ['AZURE_OPENAI_ENDPOINT'] = st.session_state.resource_name
 
 # 利用可能なタグ一覧
 TAGS = [
@@ -81,7 +66,7 @@ async def generate_image(prompt):
             # Azure OpenAI Service client setup
             client = AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
-                api_version="2024-07-01-preview",
+                api_version="2024-02-01",
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
             response = client.images.generate(
@@ -114,7 +99,7 @@ def main():
         )
 
         st.session_state.resource_name = st.text_input(
-            "Azure OpenAI Serviceのリソース名",
+            "Azure OpenAI Serviceのエンドポイント",
             disabled=(st.session_state.api_type != 'Azure OpenAI Service'),
             value=st.session_state.resource_name
         )

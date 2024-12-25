@@ -22,6 +22,11 @@
     docker build -t dalle-album .
     docker run -p 8501:8501 dalle-album
     ```
+    ※Dockerを使用できない場合は、以下のコマンドを実行する
+    ```python
+    streamlit run DALLE-Album.py
+    ```
+    なお、`--server.address localhost`オプションを追加することで、アプリケーションをローカルホストでのみ実行できます。
 
 3. ブラウザで `http://localhost:8501` にアクセスし、アプリケーションを使用します。
 

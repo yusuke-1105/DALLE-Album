@@ -1,6 +1,7 @@
 from openai import OpenAI, AzureOpenAI
-import openai
 import streamlit as st
+from PIL import Image
+import requests
 import asyncio
 import os
 
@@ -20,6 +21,8 @@ if 'base_prompt' not in st.session_state:
 # セッション状態の初期化部分に追加
 if 'ordered_tags' not in st.session_state:
     st.session_state.ordered_tags = []
+if 'prompt_area' not in st.session_state:
+    st.session_state.number = 1
 
 # 環境変数にAPIキーを設定
 os.environ['OPENAI_API_KEY'] = st.session_state.api_key
@@ -82,6 +85,20 @@ async def generate_image(prompt):
         st.error(f"Error generating image: {str(e)}")
         return None
 
+# 古い画像の下部に新しい画像を繋ぎ合わせる
+def append_images(image):
+    try:
+        roll_image = Image.open('roll_images/image.jpg')
+        width, height = roll_image.size
+        result = Image.new('RGB', (width, height + image.size[1]))
+        result.paste(roll_image, (0, 0))
+        result.paste(image, (0, height))
+        result.save('roll_images/image.jpg')
+        return
+    except:
+        image.save('roll_images/image.jpg')
+        return
+
 def main():
     if st.session_state.page == 'settings':
         st.title('API設定')
@@ -109,7 +126,7 @@ def main():
     else:  # main page
         st.title('アルバムジャケット生成 beta')
         
-        col1, col2 = st.columns([6, 1])
+        _, col2 = st.columns([6, 1])
         with col2:
             st.button('API設定画面へ', on_click=lambda: setattr(st.session_state, 'page', 'settings'))
         
@@ -146,9 +163,18 @@ def main():
                 image_url = asyncio.run(generate_image(current_prompt))
                 if image_url:
                     if image_url == 'image.jpg':
-                        st.image('images/image.jpg', caption='アルバムジャケット')
+                        image = Image.open('images/image.jpg')
+                        st.image(image, caption='アルバムジャケット')
+                        image.save(f'images_{st.session_state.number}/image.jpg')
+                        st.session_state.number = st.session_state.number % 2 + 1
+                        append_images(image)
                     else:
-                        st.image(image_url, caption='アルバムジャケット')
+                        image = Image.open(requests.get(image_url, stream=True).raw)
+                        st.image(image, caption='アルバムジャケット')
+                        image.save(f'images_{st.session_state.number}/image.jpg')
+                        st.session_state.number = st.session_state.number % 2 + 1
+                        append_images(image)
+                        
 
 if __name__ == "__main__":
     main()

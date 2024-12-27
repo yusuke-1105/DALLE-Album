@@ -3,6 +3,7 @@ import streamlit as st
 from PIL import Image
 import requests
 import asyncio
+import atexit
 import os
 
 # セッション状態の初期化
@@ -28,6 +29,14 @@ if 'prompt_area' not in st.session_state:
 os.environ['OPENAI_API_KEY'] = st.session_state.api_key
 os.environ['AZURE_OPENAI_API_KEY'] = st.session_state.api_key
 os.environ['AZURE_OPENAI_ENDPOINT'] = st.session_state.resource_name
+
+# 終了時に環境変数をクリア
+def clear_env_vars():
+    os.environ['OPENAI_API_KEY'] = ''
+    os.environ['AZURE_OPENAI_API_KEY'] = ''
+    os.environ['AZURE_OPENAI_ENDPOINT'] = ''
+
+atexit.register(clear_env_vars)
 
 # 利用可能なタグ一覧
 TAGS = [
@@ -107,18 +116,18 @@ def main():
             "API種別を選択してください",
             ('なし', 'OpenAI', 'Azure OpenAI Service')
         )
-        
-        st.session_state.api_key = st.text_input(
-            "API Key",
-            type="password",
-            disabled=(st.session_state.api_type == 'なし'),
-            value=st.session_state.api_key
-        )
 
         st.session_state.resource_name = st.text_input(
             "Azure OpenAI Serviceのエンドポイント",
             disabled=(st.session_state.api_type != 'Azure OpenAI Service'),
             value=st.session_state.resource_name
+        )
+
+        st.session_state.api_key = st.text_input(
+            "APIキー",
+            type="password",
+            disabled=(st.session_state.api_type == 'なし'),
+            value=st.session_state.api_key
         )
         
         st.button('送信 or 戻る', on_click=lambda: setattr(st.session_state, 'page', 'main'))
@@ -128,18 +137,20 @@ def main():
         
         _, col2 = st.columns([6, 1])
         with col2:
-            st.button('API設定画面へ', on_click=lambda: setattr(st.session_state, 'page', 'settings'))
+            st.button('API設定', on_click=lambda: setattr(st.session_state, 'page', 'settings'))
         
-        # main() 関数内のプロンプト入力エリアの部分を修正
-        # プロンプト入力エリア
+        # プロンプト入力エリア ----------------
         current_prompt = st.text_area("基本プロンプト", value=update_prompt(), key="prompt_area")
         # 基本プロンプト部分のみを保存
         if ":" in current_prompt:
             st.session_state.base_prompt = current_prompt.split(":")[0] + ":"
         else:
             st.session_state.base_prompt = current_prompt
+
+        # フォルダ番号選択エリア ----------------
+        st.session_state.number = st.selectbox('フォルダ番号', [1, 2], index=st.session_state.number - 1, key='pic_number')
         
-        # タグ選択エリア
+        # タグ選択エリア -----------------------
         st.write("スタイルタグを選択してください：")
         cols = st.columns(5)
         for i, tag in enumerate(TAGS):
@@ -157,7 +168,7 @@ def main():
                         st.session_state.ordered_tags.append(tag)
                     st.rerun()
         
-        # 画像生成ボタン
+        # 画像生成ボタン -----------------------
         if st.button('生成'):
             with st.spinner('画像を生成中...'):
                 image_url = asyncio.run(generate_image(current_prompt))
@@ -174,7 +185,6 @@ def main():
                         image.save(f'images_{st.session_state.number}/image.jpg')
                         st.session_state.number = st.session_state.number % 2 + 1
                         append_images(image)
-                        
 
 if __name__ == "__main__":
     main()

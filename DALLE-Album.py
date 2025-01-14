@@ -38,12 +38,42 @@ def clear_env_vars():
 
 atexit.register(clear_env_vars)
 
+# メインのディレクトリ
+ROOT_DIR = "."
+# ROOT_DIR = "."
+
+# フォルダの作成
+if not os.path.exists(ROOT_DIR + "/Pic-1"):
+    os.makedirs(ROOT_DIR + "/Pic-1")
+if not os.path.exists(ROOT_DIR + "/Pic-2"):
+    os.makedirs(ROOT_DIR + "/Pic-2")
+if not os.path.exists(ROOT_DIR + "/history"):
+    os.makedirs(ROOT_DIR + "/history")
+
 # 利用可能なタグ一覧
-TAGS = [
-    "ポップ", "ロック", "ジャズ", "クラシック", 
-    "エレクトロニック", "アコースティック", "サイケデリック",
-    "ミニマル", "レトロ", "モダン"
+JTAGS = [
+    "ポップ", "ロック", "ジャズ", "クラシック", "モダン",
+    "ヒップホップ","R&B", "EDM", "JPOP", "KPOP",
+    "嬉しい", "悲しい", "怒り", "恐怖", "驚き",
+    "1970's", "1980's", "1990's", "2000's", "2010's",
+    "猫", "犬", "鳥", "牛", "豚",
+    "CG", "アニメ", "写真", "水彩", "油絵",
+    "赤", "青", "黄", "緑", "紫",
+    "愛", "夢", "未来", "過去", "自然",
+    "宇宙", "海", "山", "都市", "田舎"
 ]
+
+ETAGS_DICT = {
+    "ポップ": "pop", "ロック": "rock", "ジャズ": "jazz", "クラシック": "classical", "モダン": "modern",
+    "ヒップホップ": "hip-hop", "R&B": "r&b", "EDM": "edm", "JPOP": "j-pop", "KPOP": "k-pop",
+    "嬉しい": "happy", "悲しい": "sad", "怒り": "angry", "恐怖": "fear", "驚き": "surprise",
+    "1970's": "1970s", "1980's": "1980s", "1990's": "1990s", "2000's": "2000s", "2010's": "2010s",
+    "猫": "cat", "犬": "dog", "鳥": "bird", "牛": "cow", "豚": "pig",
+    "CG": "Computer Graphics", "アニメ": "anime", "写真": "realistic image", "水彩": "watercolor", "油絵": "oil-painting",
+    "赤": "red", "青": "blue", "黄": "yellow", "緑": "green", "紫": "purple",
+    "愛": "love", "夢": "dream", "未来": "future", "過去": "past", "自然": "nature",
+    "宇宙": "space", "海": "sea", "山": "mountain", "都市": "city", "田舎": "country"
+}
 
 # update_prompt() 関数を修正
 def update_prompt():
@@ -97,15 +127,15 @@ async def generate_image(prompt):
 # 古い画像の下部に新しい画像を繋ぎ合わせる
 def append_images(image):
     try:
-        roll_image = Image.open('roll_images/image.jpg')
+        roll_image = Image.open(f'{ROOT_DIR}/history/image.jpg')
         width, height = roll_image.size
         result = Image.new('RGB', (width, height + image.size[1]))
         result.paste(roll_image, (0, 0))
         result.paste(image, (0, height))
-        result.save('roll_images/image.jpg')
+        result.save(f'{ROOT_DIR}/history/image.jpg')
         return
     except:
-        image.save('roll_images/image.jpg')
+        image.save(f'{ROOT_DIR}/history/image.jpg')
         return
 
 def main():
@@ -152,37 +182,39 @@ def main():
         
         # タグ選択エリア -----------------------
         st.write("スタイルタグを選択してください：")
+        st.write("ジャンル×2、感情、時代、動物、画風、色、その他×2")
         cols = st.columns(5)
-        for i, tag in enumerate(TAGS):
+        for i, tag in enumerate(JTAGS):
             with cols[i % 5]:
                 if st.button(
                     tag,
                     type="primary" if tag in st.session_state.selected_tags else "secondary",
                     key=f"tag_{tag}"
                 ):
-                    if tag in st.session_state.selected_tags:
-                        st.session_state.selected_tags.remove(tag)
-                        st.session_state.ordered_tags.remove(tag)
+                    t = ETAGS_DICT[tag] if tag in ETAGS_DICT else tag
+                    if t in st.session_state.selected_tags:
+                        st.session_state.selected_tags.remove(t)
+                        st.session_state.ordered_tags.remove(t)
                     else:
-                        st.session_state.selected_tags.add(tag)
-                        st.session_state.ordered_tags.append(tag)
+                        st.session_state.selected_tags.add(t)
+                        st.session_state.ordered_tags.append(t)
                     st.rerun()
         
         # 画像生成ボタン -----------------------
-        if st.button('生成'):
+        if st.button('生成', icon='🎨'):
             with st.spinner('画像を生成中...'):
                 image_url = asyncio.run(generate_image(current_prompt))
                 if image_url:
                     if image_url == 'image.jpg':
                         image = Image.open('images/image.jpg')
                         st.image(image, caption='アルバムジャケット')
-                        image.save(f'images_{st.session_state.number}/image.jpg')
+                        image.save(f'{ROOT_DIR}/Pic-{st.session_state.number}/image.jpg')
                         st.session_state.number = st.session_state.number % 2 + 1
                         append_images(image)
                     else:
                         image = Image.open(requests.get(image_url, stream=True).raw)
                         st.image(image, caption='アルバムジャケット')
-                        image.save(f'images_{st.session_state.number}/image.jpg')
+                        image.save(f'{ROOT_DIR}/Pic-{st.session_state.number}/image.jpg')
                         st.session_state.number = st.session_state.number % 2 + 1
                         append_images(image)
 
